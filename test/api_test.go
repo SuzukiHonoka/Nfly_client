@@ -11,15 +11,16 @@ const (
 )
 
 func TestAPI(t *testing.T) {
-	user,pass := "test5","1"
-	api := nfly.NewAPI("127.0.0.1:7700")
+	user, pass := "test5", "1"
+	var api nfly.Methods
+	api = nfly.NewAPI("127.0.0.1:7700")
 	// Register test
-	if !api.Register(user,pass){
+	if !api.Register(user, pass) {
 		t.Error("cannot register")
 	}
 	t.Log("register test ok")
 	// Login test
-	if !api.Login(user,pass){
+	if !api.Login(user, pass) {
 		t.Error("cannot login")
 	}
 	t.Log("login test ok")
@@ -28,26 +29,26 @@ func TestAPI(t *testing.T) {
 		t.Error("cannot push")
 	}
 	t.Log("push test ok")
-	// Feed test
+	// Feeds test
 	var uid string
-	if f:=api.Feed();len(f) == 0 {
+	if f := api.Feeds(); len(f) == 0 {
 		t.Error("cannot fetch feeds")
-	}else {
+	} else {
 		//t.Log(f)
 		var data []interface{}
-		_ = json.Unmarshal([]byte(f),&data)
+		_ = json.Unmarshal([]byte(f), &data)
 		//t.Logf("%v+",data)
 		uid = data[0].(map[string]interface{})["Header"].(map[string]interface{})["UUID"].(string)
 		//t.Log(uid)
 	}
 	t.Log("feed test ok")
 	// Collect test
-	if !api.Collect(uid,true) {
+	if !api.Collect(uid, true) {
 		t.Error("cannot collect")
 	}
 	t.Log("collect test ok")
 	// Delete test
-	if !api.Delete(user){
+	if !api.Delete(user) {
 		t.Error("cannot delete")
 	}
 	t.Log("delete test ok")
