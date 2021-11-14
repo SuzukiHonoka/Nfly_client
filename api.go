@@ -84,6 +84,7 @@ func (x *API) Register(usr string, pass string) bool {
 }
 
 func (x *API) Delete(usr string) bool {
+	x.CheckAndUpdateCookies()
 	target := *apiURL["delete"]
 	target.Path = path.Join(target.Path, usr)
 	data, err := x.Request.Delete(target.String())
@@ -114,6 +115,7 @@ func (x *API) Push(formatted string) bool {
 }
 
 func (x *API) Collect(uid string, ok bool) bool {
+	x.CheckAndUpdateCookies()
 	target := *apiURL["collect"]
 	target.Path = path.Join(target.Path, uid)
 	var status []byte
@@ -134,9 +136,7 @@ func (x *API) CheckAndUpdateCookies() {
 		log.Println("session updating..")
 		result := x.Login(x.User.Email, x.User.Password)
 		log.Printf("session update status: %t", result)
-		return
+		//return
 	}
-	log.Println("session valid")
-	//return
-	//log.Println("warning: session cookies not exist")
+	//log.Println("session valid")
 }
