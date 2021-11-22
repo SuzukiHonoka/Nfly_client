@@ -26,6 +26,7 @@ type Methods interface {
 	Login(usr string, pass string) bool
 	Register(usr string, pass string) bool
 	Delete(usr string) bool
+	Logout() bool
 	Feeds() string
 	Collect(uid string, ok bool) bool
 	Push(formatted string) bool
@@ -48,7 +49,6 @@ func NewAPI(host string) *API { // http will only available in test env
 
 func registerAPI(server *url.URL) {
 	// register base api url
-
 	for _, apiPath := range apiPaths {
 		tmp := *server
 		tmp.Path = path.Join(tmp.Path, apiPath)
@@ -62,7 +62,8 @@ func (x *API) Login(usr string, pass string) bool {
 		"password": []string{pass},
 	})
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("%s error: %s\n", "login", err.Error())
+		return false
 	}
 	if data.Status {
 		// save credit in case session exp
@@ -78,24 +79,38 @@ func (x *API) Register(usr string, pass string) bool {
 		"password": []string{pass},
 	})
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("%s error: %s\n", "register", err.Error())
+		return false
+	}
+	return data.Status
+}
+
+func (x *API) Logout() bool {
+	if !x.CheckSession() {
+		return true
+	}
+	data, err := x.Request.Get(apiURL["logout"].String())
+	if err != nil {
+		log.Printf("%s error: %s\n", "logout", err.Error())
+		return false
 	}
 	return data.Status
 }
 
 func (x *API) Delete(usr string) bool {
-	x.CheckAndUpdateCookies()
+	x.CheckAndUpdateSession()
 	target := *apiURL["delete"]
 	target.Path = path.Join(target.Path, usr)
 	data, err := x.Request.Delete(target.String())
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("%s error: %s\n", "delete", err.Error())
+		return false
 	}
 	return data.Status
 }
 
 func (x *API) Feeds() string {
-	x.CheckAndUpdateCookies()
+	x.CheckAndUpdateSession()
 	data, err := x.Request.Get(apiURL["feeds"].String())
 	if err != nil || !data.Status {
 		log.Println("warning: fetch feeds failed")
@@ -106,16 +121,17 @@ func (x *API) Feeds() string {
 }
 
 func (x *API) Push(formatted string) bool {
-	x.CheckAndUpdateCookies()
+	x.CheckAndUpdateSession()
 	data, err := x.Request.Post(apiURL["push"].String(), "json", strings.NewReader(formatted))
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("%s error: %s\n", "push", err.Error())
+		return false
 	}
 	return data.Status
 }
 
 func (x *API) Collect(uid string, ok bool) bool {
-	x.CheckAndUpdateCookies()
+	x.CheckAndUpdateSession()
 	target := *apiURL["collect"]
 	target.Path = path.Join(target.Path, uid)
 	var status []byte
@@ -126,13 +142,18 @@ func (x *API) Collect(uid string, ok bool) bool {
 	}
 	data, err := x.Request.Put(target.String(), status)
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("%s error: %s\n", "collect", err.Error())
+		return false
 	}
 	return data.Status
 }
 
-func (x *API) CheckAndUpdateCookies() {
-	if x.SessionEXP.Sub(time.Now()) < 0 {
+func (x *API) CheckSession() bool {
+	return x.SessionEXP.Sub(time.Now()) > 0
+}
+
+func (x *API) CheckAndUpdateSession() {
+	if !x.CheckSession() {
 		log.Println("session updating..")
 		result := x.Login(x.User.Email, x.User.Password)
 		log.Printf("session update status: %t", result)
